@@ -4,18 +4,35 @@ use strict;
 use warnings;
 use base 'CGI::Application';
 use UNIVERSAL::require '0.10';
-our $VERSION = '0.01';
-our @ISA;
+our $VERSION = '0.02';
 
 sub import {
-    my ( $self, @options ) = @_;
+    my ( $self, %options ) = @_;
     my $caller = caller(0);
-    no strict 'refs';
-    push @{"$caller\::ISA"}, $self;
-    for my $option ( @options ){
-        my $plugin = "CGI::Application::Plugin::$option";
-        $plugin->use;
+
+    {
+        no strict 'refs';
+        push @{"$caller\::ISA"}, $self;
     }
+
+    for my $option ( keys %options ){
+        if ( $option eq 'no_option') {
+            for my $plugin ( @{$options{$option}} ) {
+                my $plaggable = $self->_mk_plugin_name($plugin);
+                $plaggable->use or die $@;
+            }
+        }
+        else {
+            my $plaggable = $self->_mk_plugin_name($option);
+            $plaggable->use( @{$options{$option}} ) or die $@;
+        }
+   }
+}
+
+sub _mk_plugin_name {
+    my $self = shift;
+    my $name = shift;
+    return "CGI::Application::Plugin::$name";
 }
 
 1;
@@ -26,22 +43,25 @@ CGI::Application::Pluggable - support to many plugin install.
 
 =head1 VERSION
 
-This documentation refers to CGI::Application::Pluggable version 0.01
+This documentation refers to CGI::Application::Pluggable version 0.02
 
 =head1 SYNOPSIS
 
-    use CGI::Application::Pluggable qw/ TT DebugScreen /;
-
-    sub cgiapp_init {
-        my $self = shift;
-    }
+    use CGI::Application::Pluggable 
+        no_option    => [ qw/TT LogDispatch DebugScreen Session Redirect Forward/ ],
+        'Config::YAML' => [ qw/
+            config_file
+            config_param
+            config
+        / ]
+    ;
 
 =head1 DESCRIPTION
 
 CAP::Pluggable is auto install many plugin.
 
 This only has to do use
- though use base is done when CGI::Application is used usually. 
+ though use base is done when CGI::Application is used usually.
 
 =head1 DEPENDENCIES
 
@@ -71,10 +91,9 @@ Atsushi Kobayashi, E<lt>nekokak@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2005 by Atsushi Kobayashi (E<lt>nekokak@cpan.orgE<gt>). All rights reserved.
+Copyright (C) 2006 by Atsushi Kobayashi (E<lt>nekokak@cpan.orgE<gt>). All rights reserved.
 
 This library is free software; you can redistribute it and/or modify it
  under the same terms as Perl itself. See L<perlartistic>.
 
 =cut
-
