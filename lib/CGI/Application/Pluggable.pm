@@ -4,10 +4,10 @@ use strict;
 use warnings;
 use base 'CGI::Application';
 use UNIVERSAL::require '0.10';
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub import {
-    my ( $self, %options ) = @_;
+    my ( $self, @options ) = @_;
     my $caller = caller(0);
 
     {
@@ -15,16 +15,15 @@ sub import {
         push @{"$caller\::ISA"}, $self;
     }
 
-    for my $option ( keys %options ){
-        if ( $option eq 'no_option') {
-            for my $plugin ( @{$options{$option}} ) {
-                my $plaggable = $self->_mk_plugin_name($plugin);
-                $plaggable->use or die $@;
-            }
+    for my $option ( @options ) {
+        if ( ref $option eq 'HASH') {
+            my ($plugin,$imports) = each(%{$option});
+            my $plaggable = $self->_mk_plugin_name($plugin);
+            $plaggable->use( @{$imports} ) or die $@;
         }
         else {
             my $plaggable = $self->_mk_plugin_name($option);
-            $plaggable->use( @{$options{$option}} ) or die $@;
+            $plaggable->use or die $@;
         }
    }
 }
@@ -43,17 +42,17 @@ CGI::Application::Pluggable - support to many plugin install.
 
 =head1 VERSION
 
-This documentation refers to CGI::Application::Pluggable version 0.02
+This documentation refers to CGI::Application::Pluggable version 0.03
 
 =head1 SYNOPSIS
 
     use CGI::Application::Pluggable 
-        no_option    => [ qw/TT LogDispatch DebugScreen Session Redirect Forward/ ],
-        'Config::YAML' => [ qw/
+        qw/TT LogDispatch DebugScreen Session Redirect Forward/,
+        {'Config::YAML' => [ qw/
             config_file
             config_param
             config
-        / ]
+        / ]},
     ;
 
 =head1 DESCRIPTION
